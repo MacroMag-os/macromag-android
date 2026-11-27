@@ -32,23 +32,21 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full cpio gzip
           mkdir -p work rootfs_extract app/src/main/assets
-          ISO_URL="https://github.com/MacroMag-os/MacroMag-32/releases/latest/download/MacroMag-aarch64.iso"
+          ISO_URL="https://github.com"
           curl -fSL "$ISO_URL" -o work/macromag.iso
           7z x work/macromag.iso -owork/iso_files
           INITRD=$(find work/iso_files -name 'initramfs*' | head -n 1)
           (cd rootfs_extract && gzip -dc "../$INITRD" | cpio -idmv)
           tar -czf app/src/main/assets/macromag-arm64-rootfs.tar.gz -C rootfs_extract .
 
-      - name: Build Signed Release APK
-        env:
-          KEYSTORE_PASSWORD: MacroMag2026
-          KEY_ALIAS: macromag
-          KEY_PASSWORD: MacroMag2026
-        run: gradle assembleRelease --stacktrace
-
-      - name: Rename and Upload Release APK
+      - name: Build and Sign Release APK
         run: |
-          cp app/build/outputs/apk/release/app-release.apk MacroMag-OS-v1.0.1-release.apk
+          gradle assembleRelease --info
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name apksigner | sort -V | tail -n 1)
+          ZIPALIGN=$(find $ANDROID_HOME/build-tools -name zipalign | sort -V | tail -n 1)
+          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          $ZIPALIGN -f -p 4 "$UNSIGNED_APK" MacroMag-aligned.apk
+          $APKSIGNER sign --ks app/release.keystore --ks-pass pass:MacroMag2026 --ks-key-alias macromag --key-pass pass:MacroMag2026 --out MacroMag-OS-v1.0.1-release.apk MacroMag-aligned.apk
 
       - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
