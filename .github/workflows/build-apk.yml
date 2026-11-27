@@ -26,22 +26,22 @@ jobs:
 
       - name: Fetch latest ARM64 rootfs from MacroMag-32 ISO
         run: |
-          sudo apt-get update && sudo apt-get install -y p7zip-full cpio gzip
-          mkdir -p work rootfs_extract
-          ISO_URL=$(curl -s https://api.github.com/repos/MacroMag-os/MacroMag-32/releases/latest | grep -oE 'https://[^"]+aarch64[^"]+\.iso' | head -n 1)
-          if [ -n "$ISO_URL" ]; then
+          sudo apt-get update && sudo apt-get install -y p7zip-full cpio gzip jq
+          mkdir -p work rootfs_extract app/src/main/assets
+
+          ISO_URL=$(curl -s https://github.com | jq -r '.assets[] | select(.name | test("aarch64.*\\.iso$")) | .browser_download_url' | head -n 1)
+
+          if [ -n "$ISO_URL" ] && [ "$ISO_URL" != "null" ]; then
             echo "Pobieranie ISO: $ISO_URL"
             curl -fSL "$ISO_URL" -o work/macromag.iso
             7z x work/macromag.iso -owork/iso_files
             INITRD=$(find work/iso_files -name 'initramfs*' | head -n 1)
-            cd rootfs_extract
-            gzip -dc "../$INITRD" | cpio -idmv
-            tar -czf ../app/src/main/assets/macromag-arm64-rootfs.tar.gz .
-            cd ..
-          else
-            echo "Brak ISO arm64 w Releases - tworze minimalny szkielet rootfs"
-            mkdir -p rootfs_extract/root rootfs_extract/bin
+            echo "Rozpakowywanie initramfs: $INITRD"
+            (cd rootfs_extract && gzip -dc "../$INITRD" | cpio -idmv)
             tar -czf app/src/main/assets/macromag-arm64-rootfs.tar.gz -C rootfs_extract .
+          else
+            echo "BLAD: Nie znaleziono pliku MacroMag-aarch64.iso w najnowszym wydaniu MacroMag-32!"
+            exit 1
           fi
 
       - name: Build Debug APK
