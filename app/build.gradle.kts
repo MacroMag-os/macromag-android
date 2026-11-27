@@ -7,6 +7,10 @@ android {
     namespace = "org.macromag.os"
     compileSdk = 34
 
+    androidResources {
+        noCompress += listOf("tar", "gz")
+    }
+
     defaultConfig {
         applicationId = "org.macromag.os"
         minSdk = 24
