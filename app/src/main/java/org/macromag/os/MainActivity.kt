@@ -190,8 +190,7 @@ class MainActivity : AppCompatActivity() {
                 val assetList = assets.list("") ?: emptyArray()
                 val tarAsset = assetList.firstOrNull { it.endsWith(".tar.gz") }
                     ?: throw Exception("No .tar.gz found in assets: ${assetList.joinToString()}")
-                appendOutput("Found archive: $tarAsset
-")
+                appendOutput("Found archive: $tarAsset\n")
                 extractTarGz(tarAsset, rootfsDir)
                 marker.createNewFile()
                 appendOutput("Done! Starting shell...\n\n")
