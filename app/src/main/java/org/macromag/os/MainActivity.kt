@@ -1,315 +1,175 @@
 package org.macromag.os
 
-import android.graphics.Color
-import android.graphics.Typeface
 import android.os.Bundle
-import android.view.Gravity
-import android.view.KeyEvent
-import android.view.View
-import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
-import android.widget.HorizontalScrollView
-import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.io.OutputStreamWriter
-import java.util.zip.GZIPInputStream
+import java.io.InputStream
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var outputView: TextView
-    private lateinit var scrollView: ScrollView
-    private lateinit var inputBox: EditText
-    private var shellWriter: OutputStreamWriter? = null
-    private var shellProcess: Process? = null
+
+    private lateinit var terminalOutput: TextView
+    private lateinit var terminalScroll: ScrollView
+    private lateinit var commandInput: EditText
+    private lateinit var rootfsDir: File
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#0D1117"))
-        }
+        terminalOutput = findViewById(R.id.terminalOutput)
+        terminalScroll = findViewById(R.id.terminalScroll)
+        commandInput = findViewById(R.id.commandInput)
+        val runButton: Button = findViewById(R.id.runButton)
 
-        val header = TextView(this).apply {
-            text = "  MacroMag OS (ARM64 VOS Terminal)"
-            setTextColor(Color.parseColor("#58A6FF"))
-            setBackgroundColor(Color.parseColor("#161B22"))
-            typeface = Typeface.MONOSPACE
-            textSize = 14f
-            setPadding(16, 24, 16, 24)
-        }
-        root.addView(header)
+        rootfsDir = File(filesDir, "rootfs")
 
-        scrollView = ScrollView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1.0f
-            )
-            setPadding(20, 16, 20, 16)
-        }
-
-        outputView = TextView(this).apply {
-            setTextColor(Color.parseColor("#E6EDF3"))
-            typeface = Typeface.MONOSPACE
-            textSize = 13f
-            setTextIsSelectable(true)
-            text = "Initializing MacroMag OS rootfs...\n"
-        }
-        scrollView.addView(outputView)
-        root.addView(scrollView)
-
-        val shortcutScroll = HorizontalScrollView(this).apply {
-            setBackgroundColor(Color.parseColor("#161B22"))
-        }
-        val shortcutBar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(8, 8, 8, 8)
-        }
-
-        val shortcuts = listOf(
-            "sys.cpu()" to "sys.cpu()\n",
-            "disk.list()" to "disk.list()\n",
-            "mur sync" to "mur sync\n",
-            "mur list" to "mur list\n",
-            "ls -la" to "ls -la\n",
-            "Ctrl+C" to "\u0003"
-        )
-
-        for ((label, cmd) in shortcuts) {
-            val btn = Button(this).apply {
-                text = label
-                textSize = 11f
-                isAllCaps = false
-                setTextColor(Color.WHITE)
-                setBackgroundColor(Color.parseColor("#21262D"))
-                val lp = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                )
-                lp.setMargins(6, 0, 6, 0)
-                layoutParams = lp
-                setOnClickListener { sendCommand(cmd) }
-            }
-            shortcutBar.addView(btn)
-        }
-        shortcutScroll.addView(shortcutBar)
-        root.addView(shortcutScroll)
-
-        val inputRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setBackgroundColor(Color.parseColor("#161B22"))
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(16, 12, 16, 16)
-        }
-
-        val prompt = TextView(this).apply {
-            text = "vos> "
-            setTextColor(Color.parseColor("#3FB950"))
-            typeface = Typeface.MONOSPACE
-            textSize = 14f
-        }
-        inputRow.addView(prompt)
-
-        inputBox = EditText(this).apply {
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f)
-            setTextColor(Color.WHITE)
-            setHintTextColor(Color.GRAY)
-            hint = "Enter VOS or Linux command..."
-            typeface = Typeface.MONOSPACE
-            textSize = 14f
-            isSingleLine = true
-            imeOptions = EditorInfo.IME_ACTION_SEND
-            setBackgroundColor(Color.TRANSPARENT)
-            setOnEditorActionListener { _, actionId, event ->
-                if (actionId == EditorInfo.IME_ACTION_SEND ||
-                    (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)
-                ) {
-                    val cmd = text.toString()
-                    setText("")
-                    appendOutput("vos> $cmd\n")
-                    sendCommand("$cmd\n")
-                    true
-                } else {
-                    false
-                }
-            }
-        }
-        inputRow.addView(inputBox)
-
-        val sendBtn = Button(this).apply {
-            text = "Run"
-            setTextColor(Color.WHITE)
-            setBackgroundColor(Color.parseColor("#238636"))
-            setOnClickListener {
-                val cmd = inputBox.text.toString()
-                inputBox.setText("")
-                appendOutput("vos> $cmd\n")
-                sendCommand("$cmd\n")
-            }
-        }
-        inputRow.addView(sendBtn)
-        root.addView(inputRow)
-
-        setContentView(root)
-
-        Thread { bootMacroMag() }.start()
-    }
-
-    private fun appendOutput(text: String) {
-        runOnUiThread {
-            outputView.append(text)
-            scrollView.post { scrollView.fullScroll(View.FOCUS_DOWN) }
-        }
-    }
-
-    private fun sendCommand(cmd: String) {
+        appendLine("Initializing MacroMag OS rootfs...")
         Thread {
-            try {
-                shellWriter?.write(cmd)
-                shellWriter?.flush()
-            } catch (e: Exception) {
-                appendOutput("[Send error]: ${e.message}\n")
-            }
+            setupRootfs()
         }.start()
+
+        runButton.setOnClickListener {
+            val cmd = commandInput.text.toString().trim()
+            if (cmd.isNotEmpty()) {
+                commandInput.text.clear()
+                executeCommand(cmd)
+            }
+        }
+
+        setupShortcut(R.id.btnSysCpu, "sys.cpu()")
+        setupShortcut(R.id.btnDiskList, "disk.list()")
+        setupShortcut(R.id.btnMurSync, "mur sync")
+        setupShortcut(R.id.btnMurList, "mur list")
+        setupShortcut(R.id.btnLs, "ls -la")
     }
 
-    private fun bootMacroMag() {
-        val rootfsDir = File(filesDir, "rootfs")
-        val marker = File(rootfsDir, ".installed")
+    private fun setupShortcut(buttonId: Int, command: String) {
+        findViewById<Button>(buttonId).setOnClickListener {
+            executeCommand(command)
+        }
+    }
 
+    private fun setupRootfs() {
+        val marker = File(rootfsDir, ".initialized")
         if (!marker.exists()) {
-            appendOutput("Extracting MacroMag OS rootfs (arm64)...\n")
-            rootfsDir.mkdirs()
+            appendLine("Extracting MacroMag OS rootfs (arm64)...")
             try {
+                rootfsDir.mkdirs()
                 val assetList = assets.list("") ?: emptyArray()
-                val tarAsset = assetList.firstOrNull { it.endsWith(".tar.gz") }
-                    ?: throw Exception("No .tar.gz found in assets: ${assetList.joinToString()}")
-                appendOutput("Found archive: $tarAsset\n")
-                extractTarGz(tarAsset, rootfsDir)
+                val tarName = assetList.firstOrNull { it.endsWith(".tar") || it.endsWith(".tar.gz") }
+                    ?: throw Exception("No rootfs archive found in assets: ${assetList.joinToString()}")
+
+                val rawStream: InputStream = assets.open(tarName)
+                extractTar(BufferedInputStream(rawStream), rootfsDir)
                 marker.createNewFile()
-                appendOutput("Done! Starting shell...\n\n")
+                appendLine("MacroMag OS (ARM64) ready! Type a command below.\n")
             } catch (e: Exception) {
-                appendOutput("Rootfs extraction error: ${e.message}\n")
-                return
+                appendLine("Rootfs extraction error: ${e.message}\n")
             }
         } else {
-            appendOutput("MacroMag OS system ready.\n\n")
-        }
-
-        val nativeDir = applicationInfo.nativeLibraryDir
-        val prootBin = File(nativeDir, "libproot.so")
-        val busyboxBin = File(nativeDir, "libbusybox.so")
-        val tmpDir = File(cacheDir, "proot_tmp").apply { mkdirs() }
-
-        val initBin = when {
-            File(rootfsDir, "init").exists() -> "/init"
-            File(rootfsDir, "usr/bin/vos").exists() -> "/usr/bin/vos"
-            File(rootfsDir, "bin/sh").exists() -> "/bin/sh"
-            else -> "/bin/sh"
-        }
-
-        try {
-            val cmd = if (prootBin.exists()) {
-                listOf(
-                    prootBin.absolutePath,
-                    "-r", rootfsDir.absolutePath,
-                    "-0",
-                    "-w", "/root",
-                    "-b", "/dev",
-                    "-b", "/proc",
-                    "-b", "/sys",
-                    initBin
-                )
-            } else if (busyboxBin.exists()) {
-                listOf(busyboxBin.absolutePath, "sh")
-            } else {
-                listOf("/system/bin/sh")
-            }
-
-            val pb = ProcessBuilder(cmd)
-            pb.environment()["PROOT_TMP_DIR"] = tmpDir.absolutePath
-            pb.environment()["HOME"] = "/root"
-            pb.environment()["TERM"] = "xterm-256color"
-            pb.environment()["PATH"] = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-            pb.redirectErrorStream(true)
-
-            val proc = pb.start()
-            shellProcess = proc
-            shellWriter = OutputStreamWriter(proc.outputStream)
-
-            val reader = proc.inputStream.bufferedReader()
-            val buf = CharArray(1024)
-            var len: Int
-            while (reader.read(buf).also { len = it } != -1) {
-                appendOutput(String(buf, 0, len))
-            }
-            val code = proc.waitFor()
-            appendOutput("\n[Process exited with code: $code]\n")
-        } catch (e: Exception) {
-            appendOutput("Failed to start MacroMag OS: ${e.message}\n")
+            appendLine("MacroMag OS (ARM64) loaded from cache.\n")
         }
     }
 
-    private fun extractTarGz(assetName: String, destDir: File) {
-        assets.open(assetName).use { rawIn ->
-            GZIPInputStream(BufferedInputStream(rawIn)).use { gzIn ->
-                val header = ByteArray(512)
-                while (true) {
-                    var readTotal = 0
-                    while (readTotal < 512) {
-                        val r = gzIn.read(header, readTotal, 512 - readTotal)
-                        if (r <= 0) return
-                        readTotal += r
-                    }
-                    if (header.all { it == 0.toByte() }) return
+    private fun extractTar(input: InputStream, destDir: File) {
+        val header = ByteArray(512)
+        while (true) {
+            var readTotal = 0
+            while (readTotal < 512) {
+                val r = input.read(header, readTotal, 512 - readTotal)
+                if (r <= 0) return
+                readTotal += r
+            }
+            if (header.all { it == 0.toByte() }) break
 
-                    val name = String(header, 0, 100).trim { it <= ' ' || it == '\u0000' }
-                    val sizeStr = String(header, 124, 12).trim { it <= ' ' || it == '\u0000' }
-                    val size = if (sizeStr.isNotEmpty()) sizeStr.toLongOrNull(8) ?: 0L else 0L
-                    val typeFlag = header[156].toInt().toChar()
+            val name = String(header, 0, 100).trim { it <= ' ' || it == '\u0000' }
+            val sizeStr = String(header, 124, 12).trim { it <= ' ' || it == '\u0000' }
+            val size = if (sizeStr.isEmpty()) 0L else sizeStr.toLongOrNull(8) ?: 0L
+            val typeFlag = header[156].toInt().toChar()
 
-                    val outFile = File(destDir, name)
-                    if (typeFlag == '5' || name.endsWith("/")) {
-                        outFile.mkdirs()
-                    } else if (typeFlag == '0' || typeFlag == '\u0000') {
-                        outFile.parentFile?.mkdirs()
-                        FileOutputStream(outFile).use { fos ->
-                            var remaining = size
-                            val buf = ByteArray(8192)
-                            while (remaining > 0) {
-                                val toRead = minOf(buf.size.toLong(), remaining).toInt()
-                                val r = gzIn.read(buf, 0, toRead)
-                                if (r <= 0) break
-                                fos.write(buf, 0, r)
-                                remaining -= r
-                            }
-                        }
-                        outFile.setExecutable(true, false)
-                    } else {
+            val cleanName = name.removePrefix("./")
+            if (cleanName.isNotEmpty() && !cleanName.contains("..")) {
+                val outFile = File(destDir, cleanName)
+                if (typeFlag == '5' || name.endsWith("/")) {
+                    outFile.mkdirs()
+                } else if (typeFlag == '0' || typeFlag == '\u0000') {
+                    outFile.parentFile?.mkdirs()
+                    FileOutputStream(outFile).use { fos ->
                         var remaining = size
                         val buf = ByteArray(8192)
                         while (remaining > 0) {
                             val toRead = minOf(buf.size.toLong(), remaining).toInt()
-                            val r = gzIn.read(buf, 0, toRead)
-                            if (r <= 0) break
-                            remaining -= r
+                            val n = input.read(buf, 0, toRead)
+                            if (n <= 0) break
+                            fos.write(buf, 0, n)
+                            remaining -= n
                         }
                     }
-
-                    val padding = (512 - (size % 512)) % 512
-                    var skipRem = padding
-                    while (skipRem > 0) {
-                        val s = gzIn.skip(skipRem)
-                        if (s <= 0) break
-                        skipRem -= s
+                    outFile.setExecutable(true, false)
+                } else {
+                    var remaining = size
+                    while (remaining > 0) {
+                        val skipped = input.skip(remaining)
+                        if (skipped <= 0) break
+                        remaining -= skipped
                     }
                 }
+            }
+
+            val padding = ((512 - (size % 512)) % 512)
+            var padRemaining = padding
+            while (padRemaining > 0) {
+                val skipped = input.skip(padRemaining)
+                if (skipped <= 0) break
+                padRemaining -= skipped
+            }
+        }
+    }
+
+    private fun executeCommand(cmd: String) {
+        appendLine("vos> $cmd")
+        Thread {
+            try {
+                val busybox = File(rootfsDir, "bin/busybox")
+                val vosBin = File(rootfsDir, "bin/vos")
+                val shBin = if (busybox.exists()) busybox.absolutePath else "/system/bin/sh"
+
+                val env = arrayOf(
+                    "PATH=${rootfsDir.absolutePath}/bin:${rootfsDir.absolutePath}/usr/bin:/system/bin",
+                    "HOME=${rootfsDir.absolutePath}/root",
+                    "ROOTFS=${rootfsDir.absolutePath}"
+                )
+
+                val fullCmd = if (vosBin.exists() && (cmd.startsWith("sys.") || cmd.startsWith("disk.") || cmd.startsWith("mur"))) {
+                    "${vosBin.absolutePath} -c \"$cmd\""
+                } else {
+                    "$shBin sh -c \"cd ${rootfsDir.absolutePath} && $cmd\""
+                }
+
+                val process = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", fullCmd), env, rootfsDir)
+                val output = process.inputStream.bufferedReader().readText()
+                val error = process.errorStream.bufferedReader().readText()
+                process.waitFor()
+
+                if (output.isNotEmpty()) appendLine(output.trimEnd())
+                if (error.isNotEmpty()) appendLine(error.trimEnd())
+            } catch (e: Exception) {
+                appendLine("Error: ${e.message}")
+            }
+        }.start()
+    }
+
+    private fun appendLine(text: String) {
+        runOnUiThread {
+            terminalOutput.append("$text\n")
+            terminalScroll.post {
+                terminalScroll.fullScroll(ScrollView.FOCUS_DOWN)
             }
         }
     }
