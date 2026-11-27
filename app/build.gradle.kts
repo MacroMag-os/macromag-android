@@ -9,11 +9,10 @@ android {
 
     defaultConfig {
         applicationId = "org.macromag.os"
-        minSdk = 26
+        minSdk = 24
         targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
-
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
@@ -42,5 +41,4 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
-    implementation("com.github.termux.termux-app:terminal-view:v0.118.1")
 }
