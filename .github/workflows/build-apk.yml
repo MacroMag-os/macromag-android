@@ -24,9 +24,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Decode Release Keystore
+      - name: Generate Release Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release.keystore
+          keytool -genkey -v -keystore app/release.keystore -alias macromag -keyalg RSA -keysize 2048 -validity 10000 -storepass MacroMag2026 -keypass MacroMag2026 -dname "CN=MacroMag OS, OU=Dev, O=MacroMag-os, L=Gniezno, ST=Wielkopolskie, C=PL"
 
       - name: Fetch latest ARM64 rootfs from MacroMag-32 ISO
         run: |
@@ -41,9 +41,9 @@ jobs:
 
       - name: Build Signed Release APK
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: MacroMag2026
+          KEY_ALIAS: macromag
+          KEY_PASSWORD: MacroMag2026
         run: gradle assembleRelease --stacktrace
 
       - name: Rename and Upload Release APK
