@@ -32,7 +32,7 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full cpio gzip
           mkdir -p work rootfs_extract app/src/main/assets
-          ISO_URL="https://github.com"
+          ISO_URL="https://github.com/MacroMag-os/MacroMag-32/releases/download/v0.2.0-arm64/MacroMag-aarch64.iso"
           curl -fSL "$ISO_URL" -o work/macromag.iso
           7z x work/macromag.iso -owork/iso_files
           INITRD=$(find work/iso_files -name 'initramfs*' | head -n 1)
