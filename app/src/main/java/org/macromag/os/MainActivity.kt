@@ -187,7 +187,12 @@ class MainActivity : AppCompatActivity() {
             appendOutput("Extracting MacroMag OS rootfs (arm64)...\n")
             rootfsDir.mkdirs()
             try {
-                extractTarGz("macromag-arm64-rootfs.tar.gz", rootfsDir)
+                val assetList = assets.list("") ?: emptyArray()
+                val tarAsset = assetList.firstOrNull { it.endsWith(".tar.gz") }
+                    ?: throw Exception("No .tar.gz found in assets: ${assetList.joinToString()}")
+                appendOutput("Found archive: $tarAsset
+")
+                extractTarGz(tarAsset, rootfsDir)
                 marker.createNewFile()
                 appendOutput("Done! Starting shell...\n\n")
             } catch (e: Exception) {
