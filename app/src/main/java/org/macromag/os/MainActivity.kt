@@ -91,14 +91,14 @@ class MainActivity : AppCompatActivity() {
             val name = String(header, 0, 100).trim { it <= ' ' || it == '\u0000' }
             val sizeStr = String(header, 124, 12).trim { it <= ' ' || it == '\u0000' }
             val size = if (sizeStr.isEmpty()) 0L else sizeStr.toLongOrNull(8) ?: 0L
-            val typeFlag = Char(header.get(156).toInt() and 0xFF)
+            val typeByte = header.get(156).toInt() and 0xFF
 
             val cleanName = name.removePrefix("./")
             if (cleanName.isNotEmpty() && !cleanName.contains("..")) {
                 val outFile = File(destDir, cleanName)
-                if (typeFlag == '5' || name.endsWith("/")) {
+                if (typeByte == 53 || name.endsWith("/")) {
                     outFile.mkdirs()
-                } else if (typeFlag == '0' || typeFlag == '\u0000') {
+                } else if (typeByte == 48 || typeByte == 0) {
                     outFile.parentFile?.mkdirs()
                     FileOutputStream(outFile).use { fos ->
                         var remaining = size
