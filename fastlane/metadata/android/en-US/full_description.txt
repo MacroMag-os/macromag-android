@@ -1,0 +1,1 @@
+MacroMag OS brings a fast, native ARM64 Linux command-line environment and the VOS shell directly to your Android device without root. Includes the MUR static package manager with 50+ pre-built CLI tools.

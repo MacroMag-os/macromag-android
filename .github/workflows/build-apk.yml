@@ -1,4 +1,4 @@
-name: Build MacroMag OS Android APK
+name: Build MacroMag OS Android Release APK
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build-apk:
+  build-release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout MacroMag-Android
@@ -24,33 +24,35 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Decode Release Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release.keystore
+
       - name: Fetch latest ARM64 rootfs from MacroMag-32 ISO
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full cpio gzip
           mkdir -p work rootfs_extract app/src/main/assets
-
           ISO_URL="https://github.com/MacroMag-os/MacroMag-32/releases/latest/download/MacroMag-aarch64.iso"
-          echo "Pobieranie ISO: $ISO_URL"
           curl -fSL "$ISO_URL" -o work/macromag.iso
-
           7z x work/macromag.iso -owork/iso_files
           INITRD=$(find work/iso_files -name 'initramfs*' | head -n 1)
-          if [ -z "$INITRD" ]; then
-            echo "BLAD: Nie znaleziono initramfs w obrazie ISO!"
-            ls -laR work/iso_files
-            exit 1
-          fi
-
-          echo "Rozpakowywanie initramfs: $INITRD"
           (cd rootfs_extract && gzip -dc "../$INITRD" | cpio -idmv)
           tar -czf app/src/main/assets/macromag-arm64-rootfs.tar.gz -C rootfs_extract .
 
-      - name: Build Debug APK
-        run: gradle assembleDebug --stacktrace
+      - name: Build Signed Release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle assembleRelease --stacktrace
 
-      - name: Upload APK to GitHub Release
+      - name: Rename and Upload Release APK
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk MacroMag-OS-v1.0.1-release.apk
+
+      - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0-android
-          name: "MacroMag OS Android APK"
-          files: app/build/outputs/apk/debug/app-debug.apk
+          tag_name: v1.0.1-android
+          name: "MacroMag OS Android APK (Signed Release)"
+          files: MacroMag-OS-v1.0.1-release.apk
