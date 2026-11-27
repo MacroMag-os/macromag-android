@@ -1,17 +1,23 @@
 package org.macromag.os
 
+import android.app.Activity
+import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
+import android.view.Gravity
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.HorizontalScrollView
+import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity() {
 
     private lateinit var terminalOutput: TextView
     private lateinit var terminalScroll: ScrollView
@@ -20,39 +26,99 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        terminalOutput = findViewById(R.id.terminalOutput)
-        terminalScroll = findViewById(R.id.terminalScroll)
-        commandInput = findViewById(R.id.commandInput)
-        val runButton: Button = findViewById(R.id.runButton)
+        val rootLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.parseColor("#0D1117"))
+            setPadding(24, 24, 24, 24)
+        }
+
+        val headerText = TextView(this).apply {
+            text = "MacroMag OS — ARM64 VOS Terminal"
+            setTextColor(Color.parseColor("#58A6FF"))
+            textSize = 16f
+            setTypeface(null, Typeface.BOLD)
+            setPadding(0, 0, 0, 16)
+        }
+        rootLayout.addView(headerText)
+
+        terminalOutput = TextView(this).apply {
+            setTextColor(Color.parseColor("#3FB950"))
+            textSize = 13f
+            typeface = Typeface.MONOSPACE
+        }
+
+        terminalScroll = ScrollView(this).apply {
+            setBackgroundColor(Color.parseColor("#010409"))
+            setPadding(16, 16, 16, 16)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                0,
+                1.0f
+            )
+            addView(terminalOutput)
+        }
+        rootLayout.addView(terminalScroll)
+
+        val shortcutBar = HorizontalScrollView(this).apply {
+            setPadding(0, 12, 0, 12)
+        }
+        val shortcutRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+        val shortcuts = listOf("sys.cpu()", "disk.list()", "mur sync", "mur list", "ls -la")
+        for (sc in shortcuts) {
+            val btn = Button(this).apply {
+                text = sc
+                textSize = 11f
+                isAllCaps = false
+                setOnClickListener { executeCommand(sc) }
+            }
+            shortcutRow.addView(btn)
+        }
+        shortcutBar.addView(shortcutRow)
+        rootLayout.addView(shortcutBar)
+
+        val inputRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        commandInput = EditText(this).apply {
+            hint = "Enter VOS or Linux command..."
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.parseColor("#8B949E"))
+            typeface = Typeface.MONOSPACE
+            isSingleLine = true
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1.0f
+            )
+        }
+
+        val runButton = Button(this).apply {
+            text = "RUN"
+            setOnClickListener {
+                val cmd = commandInput.text.toString().trim()
+                if (cmd.isNotEmpty()) {
+                    commandInput.text.clear()
+                    executeCommand(cmd)
+                }
+            }
+        }
+
+        inputRow.addView(commandInput)
+        inputRow.addView(runButton)
+        rootLayout.addView(inputRow)
+
+        setContentView(rootLayout)
 
         rootfsDir = File(filesDir, "rootfs")
-
         appendLine("Initializing MacroMag OS rootfs...")
         Thread {
             setupRootfs()
         }.start()
-
-        runButton.setOnClickListener {
-            val cmd = commandInput.text.toString().trim()
-            if (cmd.isNotEmpty()) {
-                commandInput.text.clear()
-                executeCommand(cmd)
-            }
-        }
-
-        setupShortcut(R.id.btnSysCpu, "sys.cpu()")
-        setupShortcut(R.id.btnDiskList, "disk.list()")
-        setupShortcut(R.id.btnMurSync, "mur sync")
-        setupShortcut(R.id.btnMurList, "mur list")
-        setupShortcut(R.id.btnLs, "ls -la")
-    }
-
-    private fun setupShortcut(buttonId: Int, command: String) {
-        findViewById<Button>(buttonId).setOnClickListener {
-            executeCommand(command)
-        }
     }
 
     private fun setupRootfs() {
