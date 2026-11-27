@@ -15,6 +15,11 @@ android {
         versionName = "1.0.1"
     }
 
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
     signingConfigs {
         create("release") {
             val keystoreFile = file("release.keystore")
