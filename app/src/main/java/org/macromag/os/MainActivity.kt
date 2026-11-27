@@ -129,7 +129,7 @@ class MainActivity : Activity() {
                 rootfsDir.mkdirs()
                 val assetList = assets.list("") ?: emptyArray()
                 val tarName = assetList.firstOrNull { it.endsWith(".tar") || it.endsWith(".tar.gz") }
-                    ?: throw Exception("No rootfs archive found in assets: ${assetList.joinToString()}")
+                    ?: throw Exception("No rootfs archive found in assets")
 
                 val rawStream: InputStream = assets.open(tarName)
                 extractTar(BufferedInputStream(rawStream), rootfsDir)
@@ -177,7 +177,6 @@ class MainActivity : Activity() {
                             remaining -= n
                         }
                     }
-                    outFile.setExecutable(true, false)
                 } else {
                     var remaining = size
                     while (remaining > 0) {
@@ -202,20 +201,32 @@ class MainActivity : Activity() {
         appendLine("vos> $cmd")
         Thread {
             try {
-                val busybox = File(rootfsDir, "bin/busybox")
-                val vosBin = File(rootfsDir, "bin/vos")
-                val shBin = if (busybox.exists()) busybox.absolutePath else "/system/bin/sh"
+                val nativeDir = applicationInfo.nativeLibraryDir
+                val busybox = File(nativeDir, "libbusybox.so")
+                val vosBin = File(nativeDir, "libvos.so")
+                val murBin = File(nativeDir, "libmur.so")
 
                 val env = arrayOf(
-                    "PATH=${rootfsDir.absolutePath}/bin:${rootfsDir.absolutePath}/usr/bin:/system/bin",
+                    "PATH=$nativeDir:${rootfsDir.absolutePath}/bin:${rootfsDir.absolutePath}/usr/bin:/system/bin",
                     "HOME=${rootfsDir.absolutePath}/root",
-                    "ROOTFS=${rootfsDir.absolutePath}"
+                    "ROOTFS=${rootfsDir.absolutePath}",
+                    "MUR_ROOT=${rootfsDir.absolutePath}"
                 )
 
-                val fullCmd = if (vosBin.exists() && (cmd.startsWith("sys.") || cmd.startsWith("disk.") || cmd.startsWith("mur"))) {
-                    "${vosBin.absolutePath} -c \"$cmd\""
-                } else {
-                    "$shBin sh -c \"cd ${rootfsDir.absolutePath} && $cmd\""
+                val fullCmd = when {
+                    cmd == "mur" || cmd.startsWith("mur ") -> {
+                        val args = cmd.removePrefix("mur").trim()
+                        if (murBin.exists()) "${murBin.absolutePath} $args" else "echo 'mur binary not found'"
+                    }
+                    vosBin.exists() && (cmd.startsWith("sys.") || cmd.startsWith("disk.")) -> {
+                        "${vosBin.absolutePath} -c \"$cmd\""
+                    }
+                    busybox.exists() -> {
+                        "${busybox.absolutePath} sh -c \"cd ${rootfsDir.absolutePath} && $cmd\""
+                    }
+                    else -> {
+                        "cd ${rootfsDir.absolutePath} && $cmd"
+                    }
                 }
 
                 val process = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", fullCmd), env, rootfsDir)
