@@ -28,15 +28,25 @@ jobs:
         run: |
           keytool -genkey -v -keystore app/release.keystore -alias macromag -keyalg RSA -keysize 2048 -validity 10000 -storepass MacroMag2026 -keypass MacroMag2026 -dname "CN=MacroMag OS, OU=Dev, O=MacroMag-os, L=Gniezno, ST=Wielkopolskie, C=PL"
 
-      - name: Fetch latest ARM64 rootfs from MacroMag-32 ISO
+      - name: Fetch latest ARM64 rootfs and native binaries from MacroMag-32 ISO
         run: |
           sudo apt-get update && sudo apt-get install -y p7zip-full cpio gzip
-          mkdir -p work rootfs_extract app/src/main/assets
+          mkdir -p work rootfs_extract app/src/main/assets app/src/main/jniLibs/arm64-v8a
           ISO_URL="https://github.com/MacroMag-os/MacroMag-32/releases/download/v0.2.0-arm64/MacroMag-aarch64.iso"
           curl -fSL "$ISO_URL" -o work/macromag.iso
           7z x work/macromag.iso -owork/iso_files
           INITRD=$(find work/iso_files -name 'initramfs*' | head -n 1)
           (cd rootfs_extract && gzip -dc "../$INITRD" | cpio -idmv)
+
+          # Copy ARM64 executables into jniLibs so Android 10+ grants execute permissions
+          BUSYBOX_BIN=$(find rootfs_extract -type f -name 'busybox' | head -n 1)
+          VOS_BIN=$(find rootfs_extract -type f -name 'vos' | head -n 1)
+          MUR_BIN=$(find rootfs_extract -type f -name 'mur' | head -n 1)
+
+          [ -n "$BUSYBOX_BIN" ] && cp "$BUSYBOX_BIN" app/src/main/jniLibs/arm64-v8a/libbusybox.so
+          [ -n "$VOS_BIN" ] && cp "$VOS_BIN" app/src/main/jniLibs/arm64-v8a/libvos.so
+          [ -n "$MUR_BIN" ] && cp "$MUR_BIN" app/src/main/jniLibs/arm64-v8a/libmur.so
+
           tar -czf app/src/main/assets/macromag-arm64-rootfs.tar.gz -C rootfs_extract .
 
       - name: Build and Sign Release APK
