@@ -91,7 +91,7 @@ class MainActivity : AppCompatActivity() {
             val name = String(header, 0, 100).trim { it <= ' ' || it == '\u0000' }
             val sizeStr = String(header, 124, 12).trim { it <= ' ' || it == '\u0000' }
             val size = if (sizeStr.isEmpty()) 0L else sizeStr.toLongOrNull(8) ?: 0L
-            val typeFlag = header.get(156).toInt().toChar()
+            val typeFlag = Char(header.get(156).toInt() and 0xFF)
 
             val cleanName = name.removePrefix("./")
             if (cleanName.isNotEmpty() && !cleanName.contains("..")) {
