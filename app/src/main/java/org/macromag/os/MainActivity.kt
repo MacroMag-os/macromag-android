@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity() {
             typeface = Typeface.MONOSPACE
             textSize = 13f
             setTextIsSelectable(true)
-            text = "Inicjalizacja MacroMag OS rootfs...\n"
+            text = "Initializing MacroMag OS rootfs...\n"
         }
         scrollView.addView(outputView)
         root.addView(scrollView)
@@ -120,7 +120,7 @@ class MainActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f)
             setTextColor(Color.WHITE)
             setHintTextColor(Color.GRAY)
-            hint = "Wpisz komende VOS lub Linux..."
+            hint = "Enter VOS or Linux command..."
             typeface = Typeface.MONOSPACE
             textSize = 14f
             isSingleLine = true
@@ -174,7 +174,7 @@ class MainActivity : AppCompatActivity() {
                 shellWriter?.write(cmd)
                 shellWriter?.flush()
             } catch (e: Exception) {
-                appendOutput("[Blad wysylania]: ${e.message}\n")
+                appendOutput("[Send error]: ${e.message}\n")
             }
         }.start()
     }
@@ -184,18 +184,18 @@ class MainActivity : AppCompatActivity() {
         val marker = File(rootfsDir, ".installed")
 
         if (!marker.exists()) {
-            appendOutput("Rozpakowywanie systemu MacroMag OS (arm64)...\n")
+            appendOutput("Extracting MacroMag OS rootfs (arm64)...\n")
             rootfsDir.mkdirs()
             try {
                 extractTarGz("macromag-arm64-rootfs.tar.gz", rootfsDir)
                 marker.createNewFile()
-                appendOutput("Gotowe! Uruchamianie powloki...\n\n")
+                appendOutput("Done! Starting shell...\n\n")
             } catch (e: Exception) {
-                appendOutput("Blad rozpakowywania rootfs: ${e.message}\n")
+                appendOutput("Rootfs extraction error: ${e.message}\n")
                 return
             }
         } else {
-            appendOutput("System MacroMag OS gotowy.\n\n")
+            appendOutput("MacroMag OS system ready.\n\n")
         }
 
         val nativeDir = applicationInfo.nativeLibraryDir
@@ -246,9 +246,9 @@ class MainActivity : AppCompatActivity() {
                 appendOutput(String(buf, 0, len))
             }
             val code = proc.waitFor()
-            appendOutput("\n[Proces zakonczony z kodem: $code]\n")
+            appendOutput("\n[Process exited with code: $code]\n")
         } catch (e: Exception) {
-            appendOutput("Blad uruchamiania MacroMag OS: ${e.message}\n")
+            appendOutput("Failed to start MacroMag OS: ${e.message}\n")
         }
     }
 

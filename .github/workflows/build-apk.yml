@@ -46,7 +46,7 @@ jobs:
           tar -czf app/src/main/assets/macromag-arm64-rootfs.tar.gz -C rootfs_extract .
 
       - name: Build Debug APK
-        run: gradle assembleDebug
+        run: gradle assembleDebug --stacktrace
 
       - name: Upload APK to GitHub Release
         uses: softprops/action-gh-release@v2
