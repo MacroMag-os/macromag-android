@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://android.com"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#0D1117"
+    android:padding="12dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="MacroMag OS — ARM64 VOS Terminal"
+        android:textColor="#58A6FF"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:paddingBottom="8dp" />
+
+    <ScrollView
+        android:id="@+id/terminalScroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#010409"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/terminalOutput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textColor="#3FB950"
+            android:textSize="13sp" />
+    </ScrollView>
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingVertical="6dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button android:id="@+id/btnSysCpu" android:layout_width="wrap_content" android:layout_height="38dp" android:text="sys.cpu()" android:textSize="11sp" android:layout_marginEnd="4dp" />
+            <Button android:id="@+id/btnDiskList" android:layout_width="wrap_content" android:layout_height="38dp" android:text="disk.list()" android:textSize="11sp" android:layout_marginEnd="4dp" />
+            <Button android:id="@+id/btnMurSync" android:layout_width="wrap_content" android:layout_height="38dp" android:text="mur sync" android:textSize="11sp" android:layout_marginEnd="4dp" />
+            <Button android:id="@+id/btnMurList" android:layout_width="wrap_content" android:layout_height="38dp" android:text="mur list" android:textSize="11sp" android:layout_marginEnd="4dp" />
+            <Button android:id="@+id/btnLs" android:layout_width="wrap_content" android:layout_height="38dp" android:text="ls -la" android:textSize="11sp" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/commandInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Enter VOS or Linux command..."
+            android:textColor="#FFFFFF"
+            android:textColorHint="#8B949E"
+            android:fontFamily="monospace"
+            android:singleLine="true" />
+
+        <Button
+            android:id="@+id/runButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="RUN" />
+    </LinearLayout>
+</LinearLayout>
