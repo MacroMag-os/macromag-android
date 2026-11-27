@@ -7,10 +7,6 @@ android {
     namespace = "org.macromag.os"
     compileSdk = 34
 
-    androidResources {
-        noCompress += listOf("tar", "gz")
-    }
-
     defaultConfig {
         applicationId = "org.macromag.os"
         minSdk = 24
@@ -19,30 +15,18 @@ android {
         versionName = "1.0.1"
     }
 
+    androidResources {
+        noCompress += listOf("tar", "gz")
+    }
+
     lint {
         checkReleaseBuilds = false
         abortOnError = false
     }
 
-    signingConfigs {
-        create("release") {
-            val keystoreFile = file("release.keystore")
-            if (keystoreFile.exists()) {
-                storeFile = keystoreFile
-                storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS")
-                keyPassword = System.getenv("KEY_PASSWORD")
-            }
-        }
-    }
-
-        buildTypes {
+    buildTypes {
         release {
             isMinifyEnabled = false
-        }
-    }
-
-            )
         }
     }
 
@@ -50,6 +34,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
         jvmTarget = "17"
     }
